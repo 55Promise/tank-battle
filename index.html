@@ -951,22 +951,33 @@ function gameLoop() {
     }
   }
 
-  // 坦克间碰撞（玩家 vs 敌人）
-  if (player && player.alive) {
-    for (const enemy of enemies) {
-      if (!enemy.alive) continue;
-      const pb = player.getBounds();
-      const eb = enemy.getBounds();
-      if (!(pb.right <= eb.left || pb.left >= eb.right ||
-            pb.bottom <= eb.top || pb.top >= eb.bottom)) {
-        // 推开
-        const pcx = player.getCenter().x, pcy = player.getCenter().y;
-        const ecx = enemy.getCenter().x, ecy = enemy.getCenter().y;
-        const angle = Math.atan2(pcy - ecy, pcx - ecx);
-        const pushX = Math.cos(angle) * 1;
-        const pushY = Math.sin(angle) * 1;
-        player.move(pushX, pushY, allTanks);
-        enemy.move(-pushX, -pushY, allTanks);
+  // 坦克间碰撞处理（玩家 vs 敌人 + 敌人 vs 敌人）
+  const allAlive = [player, ...enemies].filter(t => t && t.alive);
+  for (let i = 0; i < allAlive.length; i++) {
+    for (let j = i + 1; j < allAlive.length; j++) {
+      const a = allAlive[i];
+      const b = allAlive[j];
+      const ab = a.getBounds();
+      const bb = b.getBounds();
+      if (ab.right <= bb.left || ab.left >= bb.right ||
+          ab.bottom <= bb.top || ab.top >= bb.bottom) continue;
+
+      // 两坦克重叠，互相推开
+      const ac = a.getCenter(), bc = b.getCenter();
+      const angle = Math.atan2(ac.y - bc.y, ac.x - bc.x);
+      const pushX = Math.cos(angle) * 1.5;
+      const pushY = Math.sin(angle) * 1.5;
+      a.move(pushX, pushY, allTanks);
+      b.move(-pushX, -pushY, allTanks);
+
+      // 被推的坦克立即换方向
+      if (!a.isPlayer) {
+        a.aiTimer = a.aiChangeDir;
+        a.tryAlternativeDirections(allTanks);
+      }
+      if (!b.isPlayer) {
+        b.aiTimer = b.aiChangeDir;
+        b.tryAlternativeDirections(allTanks);
       }
     }
   }
