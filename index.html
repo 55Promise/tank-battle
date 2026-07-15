@@ -429,22 +429,7 @@ class Tank {
     if (this.aiTimer >= this.aiChangeDir) {
       this.aiTimer = 0;
       this.aiChangeDir = 40 + Math.floor(Math.random() * 100);
-
-      // 随机改变方向（有一定概率朝向玩家）
-      if (player && player.alive && Math.random() < 0.4) {
-        const cx = this.getCenter().x;
-        const cy = this.getCenter().y;
-        const px = player.getCenter().x;
-        const py = player.getCenter().y;
-
-        if (Math.abs(cx - px) > Math.abs(cy - py)) {
-          this.dir = cx < px ? RIGHT : LEFT;
-        } else {
-          this.dir = cy < py ? DOWN : UP;
-        }
-      } else {
-        this.dir = Math.floor(Math.random() * 4);
-      }
+      this.pickNewDirection();
     }
 
     // 沿当前方向移动
@@ -457,13 +442,64 @@ class Tank {
     }
 
     if (!this.move(dx, dy, allTanks)) {
-      // 撞墙换方向
-      this.aiTimer = this.aiChangeDir;
+      // 撞墙：立即尝试其他方向，选一个能走的
+      this.tryAlternativeDirections(allTanks);
+      this.aiTimer = this.aiChangeDir; // 下一帧重新选方向
+    }
+
+    // 对齐网格（防止小数坐标导致卡墙缝）
+    if (this.speed % 1 !== 0 && Math.random() < 0.05) {
+      this.x = Math.round(this.x / CELL) * CELL + 1;
+      this.y = Math.round(this.y / CELL) * CELL + 1;
     }
 
     // AI 射击
     if (this.shootCooldown <= 0 && Math.random() < 0.02) {
       this.shoot();
+    }
+  }
+
+  pickNewDirection() {
+    // 有一定概率朝向玩家
+    if (player && player.alive && Math.random() < 0.4) {
+      const cx = this.getCenter().x;
+      const cy = this.getCenter().y;
+      const px = player.getCenter().x;
+      const py = player.getCenter().y;
+
+      if (Math.abs(cx - px) > Math.abs(cy - py)) {
+        this.dir = cx < px ? RIGHT : LEFT;
+      } else {
+        this.dir = cy < py ? DOWN : UP;
+      }
+    } else {
+      this.dir = Math.floor(Math.random() * 4);
+    }
+  }
+
+  tryAlternativeDirections(allTanks) {
+    // 尝试所有4个方向，随机顺序，选第一个能走的
+    const dirs = [UP, DOWN, LEFT, RIGHT];
+    // Fisher-Yates 洗牌
+    for (let i = dirs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+    }
+
+    for (const d of dirs) {
+      let dx = 0, dy = 0;
+      switch (d) {
+        case UP: dy = -this.speed; break;
+        case DOWN: dy = this.speed; break;
+        case LEFT: dx = -this.speed; break;
+        case RIGHT: dx = this.speed; break;
+      }
+      if (!this.collidesWithMap(dx, dy) && !this.collidesWithOtherTanks(dx, dy, allTanks)) {
+        this.dir = d;
+        this.x += dx;
+        this.y += dy;
+        return;
+      }
     }
   }
 
