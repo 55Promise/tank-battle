@@ -281,9 +281,9 @@ function getLevelMap(lvl) {
   const idx = Math.min(lvl - 1, layouts.length - 1);
   layouts[idx]();
 
-  // 确保生成点通畅
-  m[1][6] = EMPTY; m[1][7] = EMPTY; m[1][18] = EMPTY; m[1][19] = EMPTY;
-  m[2][6] = EMPTY; m[2][7] = EMPTY; m[2][18] = EMPTY; m[2][19] = EMPTY;
+  // 确保三个敌人出生点通畅（行1: 第6-7, 12-13, 18-19列）
+  m[1][6] = EMPTY; m[1][7] = EMPTY; m[1][12] = EMPTY; m[1][13] = EMPTY; m[1][18] = EMPTY; m[1][19] = EMPTY;
+  m[2][6] = EMPTY; m[2][7] = EMPTY; m[2][12] = EMPTY; m[2][13] = EMPTY; m[2][18] = EMPTY; m[2][19] = EMPTY;
 
   // 确保玩家生成点通畅
   m[ROWS-2][6] = EMPTY; m[ROWS-2][7] = EMPTY;
@@ -448,7 +448,7 @@ class Tank {
     }
 
     // 对齐网格（防止小数坐标导致卡墙缝）
-    if (this.speed % 1 !== 0 && Math.random() < 0.05) {
+    if (this.speed % 1 !== 0 && this.aiTimer % 20 === 0) {
       this.x = Math.round(this.x / CELL) * CELL + 1;
       this.y = Math.round(this.y / CELL) * CELL + 1;
     }
@@ -701,11 +701,11 @@ function spawnEnemy() {
   if (enemiesRemaining <= 0) return null;
   if (enemiesOnField >= MAX_ENEMIES) return null;
 
-  // 三个可能生成点
+  // 三个可能生成点（y=CELL 确保在第1行，绕开第0行的钢铁边界）
   const spawnPoints = [
-    { x: 6 * CELL, y: 0 },
-    { x: 12 * CELL, y: 0 },
-    { x: 18 * CELL, y: 0 }
+    { x: 6 * CELL, y: CELL },
+    { x: 12 * CELL, y: CELL },
+    { x: 18 * CELL, y: CELL }
   ];
 
   // 随机选择一个未被占用的生成点
